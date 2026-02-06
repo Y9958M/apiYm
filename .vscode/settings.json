@@ -1,0 +1,13 @@
+{
+    "cSpell.words": [
+        "AMQP",
+        "checkpw",
+        "eqpt",
+        "gensalt",
+        "hashpw",
+        "httpx",
+        "passlib",
+        "redoc"
+    ],
+    "postman.settings.dotenv-detection-notification-visibility": false
+}
