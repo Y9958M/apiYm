@@ -5,7 +5,7 @@ from pydantic import BaseModel,HttpUrl,Field
 from fastapi import APIRouter
 from Crypto.Hash import MD5
 from src.core.logger import HandleLog,logCall
-from src.core.crud import get_redis_client
+from src.core.crud import get_redis_client,redis2data
 logger = HandleLog(s_name=__name__)
 router = APIRouter(tags=["车辆"], prefix="/veh")
 rds = get_redis_client()
@@ -79,24 +79,13 @@ def generate_params(code=TOKEN_KEY) -> dict:
 
 
 @router.get("/list", description="车辆基础数据接口")
-@logCall(logger)
-async def _list():
-    HEADER = {
-    "Accept": "*/*","Accept-Encoding": "gzip,deflate,br","Connection": "keep-alive",
-    "User-Agent": "PostmanRuntime/7.39.1",
-    "content-type": "application/json"
-    }
-    async with httpx.AsyncClient(timeout = 12) as client:
-        target_req = client.build_request(url=f"{DOMAIN}{API_STR}/veh/vehicleList", method="POST", headers=HEADER, params=generate_params(),json={})
-        target_resp = await client.send(target_req)
-        try:
-            json_data = target_resp.json()
-            json_data["proxy_url"] = target_req.url
-            logger.debug(json_data)
-            return json_data
-        except ValueError as e:
-            logger.error(f"无法将响应解析为JSON格式: {e}，响应内容: {target_resp.text}")
-            return {"error": "无法将响应解析为JSON格式", "content": target_resp.text}
+async def _list(db_name:str):
+    # 取redis
+    ds = redis2data(db_name,redis_client=rds)
+    # 组返回样式 
+    msg = {'code':200,'msg':'','data':ds}
+    # msg = {'code':200,'db_name':db_name}
+    return msg
 
 
 # token = get_token_veh()
@@ -110,9 +99,9 @@ async def _list():
 @router.get("/")
 def _get():
     # token = rds.get(TOKEN_KEY)
-    token = get_token_veh()
-    generate_params(token)
-    return {"message": f"Welcome to the 消火栓 URL: {DOMAIN} Params: {generate_params(token)}"}
+    # token = get_token_veh()
+    # generate_params(token)
+    return {"message": f"Welcome to the 消火栓 URL: {DOMAIN} Params: "}
 
 
 
