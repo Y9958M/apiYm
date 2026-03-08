@@ -7,7 +7,8 @@
         "hashpw",
         "httpx",
         "passlib",
-        "redoc"
+        "redoc",
+        "watergroup"
     ],
     "postman.settings.dotenv-detection-notification-visibility": false
 }
