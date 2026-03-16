@@ -7,9 +7,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import Depends, APIRouter, HTTPException, status,Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from src.config import settings
-from src.core.schemas import Token,UserInDB,TokenData,User
-ALGORITHM = "HS256"
+from src.core.db import get_db
+from src.core.schemas import Token,TokenData,User,UserPublic
 templates = Jinja2Templates(directory="static/templates")
 
 router = APIRouter(tags=["login"], prefix="/login")
@@ -40,10 +42,19 @@ fake_users_db = {
     },
 }
 
+@router.get("/users", response_model=UserPublic)
+async def read_users(tel: str = "13962631942",db: AsyncSession = Depends(get_db)):
+    statement = select(User).where(User.tel == tel)
+    result = await db.exec(statement)
+    users = result.first()    # 直接 .first() 或者 .one_or_none()
+    if not users:
+        raise HTTPException(status_code=404, detail="User not found")
+    return users
+
 def get_user(db, tel: str):
     if tel in db:
         user_dict = db[tel]
-        return UserInDB(**user_dict)
+        return UserPublic(**user_dict)
 
 def create_access_token(tel:str, expires_delta: timedelta | None = None):
     if expires_delta:
@@ -51,7 +62,7 @@ def create_access_token(tel:str, expires_delta: timedelta | None = None):
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     payload = {"sub":tel,"exp":expire}    
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
@@ -60,7 +71,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=ALGORITHM)
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
         tel = payload.get("sub")
         if tel is None:
             print("tel is None")
@@ -68,7 +79,6 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(tel=tel) 
     except InvalidTokenError:
         raise credentials_exception
-    print(token_data)
     user = get_user(fake_users_db, tel=token_data.tel)
     if user is None:
         raise credentials_exception
@@ -114,7 +124,7 @@ async def login_for_access_token(
 def verify_token(token: str) -> dict | None:
     """验证Token"""
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=ALGORITHM)
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
     except jwt.ExpiredSignatureError:
         print("Token已过期")
         return None
@@ -159,3 +169,4 @@ def login_token(username: str, password: str):
     )
     return {"access_token": access_token}
     # http://127.0.0.1:8000/api/v1/login/token?username=18550994992&password=111
+
