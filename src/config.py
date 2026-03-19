@@ -9,6 +9,7 @@ from pydantic import (
     AmqpDsn,
     Field,
     AliasChoices,
+    PostgresDsn,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -46,7 +47,9 @@ class Settings(BaseSettings):
     MYSQL_DSN: MySQLDsn = 'mysql+pymysql://root:@localhost:3306/Platform'    # type: ignore
     AMQP_DSN: AmqpDsn = 'amqp://user:pass@localhost:5672/'   # type: ignore
     REDIS_DSN: RedisDsn = Field('redis://:4197@localhost:6379/1',validation_alias=AliasChoices('service_redis_dsn', 'redis_url'),)   # type: ignore
-
+    PL_DSN:PostgresDsn = 'postgresql+asyncpg://postgres:4197@127.0.0.1:5432/postgres'
+    DB_DSN:MySQLDsn = "mysql+aiomysql://root:4197@127.0.0.1:3306/platform"
+    DEFAULT_DB:str='PL'
     CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []

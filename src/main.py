@@ -11,20 +11,19 @@ from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
 from .config import settings
 from .route import api_router
-
 from src.core.db import db_manager,redis_manager
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await redis_manager.init_pool()
-    await db_manager.init_db()
+    await db_manager.init_all()
     yield
     await redis_manager.close_pool()
-    await db_manager.close_db()
+    await db_manager.close_all()
+
 
 # 关键：将生命周期传递给 FastAPI
 app = FastAPI(
@@ -96,3 +95,4 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 # Mount the MCP server directly to your FastAPI app
 # mcp.mount()
 
+print(f"当前项目：{settings.PROJECT_NAME},环境 {settings.ENV},环境标识：{settings.EID}")
